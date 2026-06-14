@@ -3,11 +3,13 @@ import requests
 from moshpit.exceptions import MoshpitException
 from moshpit.ingest.base import BaseIngester
 
+
 class WebScraperIngester(BaseIngester):
     """
     Ingester that scrapes a web page, cleans the HTML structure,
     and queries an LLM to extract artist names.
     """
+
     def extract_artists(self, url: str) -> list[str]:
         """
         Fetches the web page, cleans the layout, and extracts artists using Ollama.
@@ -20,7 +22,7 @@ class WebScraperIngester(BaseIngester):
 
         # Clean HTML content
         soup = BeautifulSoup(response.text, "html.parser")
-        
+
         # Remove script and style elements
         for element in soup(["script", "style", "noscript", "header", "footer", "nav"]):
             element.decompose()
@@ -30,7 +32,9 @@ class WebScraperIngester(BaseIngester):
         cleaned_text = " ".join(cleaned_text.split())
 
         if not cleaned_text.strip():
-            raise MoshpitException(f"Webpage at {url} yielded no readable text content.")
+            raise MoshpitException(
+                f"Webpage at {url} yielded no readable text content."
+            )
 
         # Build prompt
         prompt = (

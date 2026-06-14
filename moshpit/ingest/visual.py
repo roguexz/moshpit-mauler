@@ -3,17 +3,21 @@ import os
 from moshpit.exceptions import MoshpitException
 from moshpit.ingest.base import BaseIngester
 
+
 class VisualIngester(BaseIngester):
     """
     Ingester that reads local images (e.g. concert poster lineups)
     and uses a local Vision-LLM via Ollama to extract artist names.
     """
+
     def extract_artists(self, image_path: str) -> list[str]:
         """
         Loads the image, base64 encodes it, and queries Ollama to extract artists.
         """
         if not os.path.exists(image_path):
-            raise MoshpitException(f"Concert poster image not found at path: {image_path}")
+            raise MoshpitException(
+                f"Concert poster image not found at path: {image_path}"
+            )
 
         try:
             with open(image_path, "rb") as image_file:

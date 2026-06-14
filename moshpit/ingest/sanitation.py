@@ -10,13 +10,14 @@ STYLIZED_ARTIST_MAP = {
 # Added days of the week to strip billing day details (e.g., "Friday")
 BILLING_FLUFF_PATTERN = re.compile(
     r"\b(main stage|stage|headliner|noon|pm|am|set|live|special guest|acoustic|vip|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
-    re.IGNORECASE
+    re.IGNORECASE,
 )
+
 
 def clean_artist_name(name: str) -> str:
     """
     Cleans and normalizes an artist name string for search matching.
-    
+
     1. Removes billing fluff, stage names, and set times.
     2. Maps known stylized names.
     3. Substitutes general stylized characters (e.g. $ -> S/s contextually).
@@ -54,11 +55,12 @@ def clean_artist_name(name: str) -> str:
 
     # 4. Accent normalization (remove diacritics)
     cleaned = "".join(
-        c for c in unicodedata.normalize("NFKD", cleaned)
+        c
+        for c in unicodedata.normalize("NFKD", cleaned)
         if not unicodedata.combining(c)
     )
 
     # 5. Clean up any remaining extra spacing or empty strings
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    
+
     return cleaned

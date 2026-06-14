@@ -1,9 +1,9 @@
 import re
 
 JSON_BLOCK_PATTERN = re.compile(
-    r"```(?:json)?\s*([\{\[].*?[\}\]])\s*```",
-    re.DOTALL | re.IGNORECASE
+    r"```(?:json)?\s*([\{\[].*?[\}\]])\s*```", re.DOTALL | re.IGNORECASE
 )
+
 
 def extract_json_block(raw_output: str) -> str:
     """
@@ -46,4 +46,4 @@ def extract_json_block(raw_output: str) -> str:
     if start > end:
         raise ValueError("Invalid JSON boundaries detected in LLM output.")
 
-    return raw_output[start:end + 1].strip()
+    return raw_output[start : end + 1].strip()
