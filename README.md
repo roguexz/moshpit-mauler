@@ -2,8 +2,8 @@
 
 ![Moshpit Mauler](docs/moshpit-mauler.png)
 
-Ever stared at a massive festival poster with fifty tiny artist names and wished you could instantly hear them all? *
-*Moshpit Mauler** is here to help: it takes a massive festival flyer and absolutely shreds it into a perfectly organized
+Ever stared at a massive festival poster with fifty tiny artist names and wished you could instantly hear them all?
+**Moshpit Mauler** is here to help: it takes a massive festival flyer and absolutely shreds it into a perfectly organized
 **Apple Music** playlist, saving you from the manual search-and-add grind.
 
 Behind the scenes, this tiny little program does some _heavy_ lifting:
