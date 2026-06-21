@@ -58,8 +58,8 @@ def get_suggested_tracks(artist: str, count: int = 3) -> list[str]:
             data = resp.json()
             songs = []
             for item in data.get("results", []):
-                item_artist = item.get("artistName", "").lower()
-                if artist.lower() in item_artist or item_artist in artist.lower():
+                item_artist = item.get("artistName", "")
+                if TopTracksResolver._artist_match(artist, item_artist):
                     track_name = item.get("trackName")
                     if track_name and track_name not in songs:
                         songs.append(track_name)
@@ -539,11 +539,10 @@ def prune_playlist(
                 typer.echo(f"Playlist '{playlist}' is empty or does not exist.")
                 return
 
-            target_lower = artist.lower().strip()
             to_remove = []
             for track in tracks:
-                track_artist = track.get("artist", "").lower().strip()
-                if target_lower in track_artist or track_artist in target_lower:
+                track_artist = track.get("artist", "")
+                if TopTracksResolver._artist_match(artist, track_artist):
                     to_remove.append(track)
 
             if not to_remove:

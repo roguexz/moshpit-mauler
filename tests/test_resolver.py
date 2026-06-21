@@ -232,7 +232,7 @@ class TestFindArtistId:
             artist_id = resolver._find_artist_id("Metallica")
             assert artist_id == 3996865
 
-    def test_falls_back_to_first_result(self, resolver):
+    def test_does_not_fall_back_on_mismatch(self, resolver):
         mock_response = {
             "resultCount": 1,
             "results": [
@@ -244,7 +244,7 @@ class TestFindArtistId:
             mock_get.return_value.json.return_value = mock_response
 
             artist_id = resolver._find_artist_id("Metallica")
-            assert artist_id == 11111
+            assert artist_id is None
 
     def test_no_results(self, resolver):
         mock_response = {"resultCount": 0, "results": []}
@@ -295,6 +295,23 @@ class TestArtistMatch:
 
     def test_no_match(self):
         assert not TopTracksResolver._artist_match("Metallica", "Megadeth")
+
+    def test_doobie_does_not_match_doobie_brothers(self):
+        assert not TopTracksResolver._artist_match("Doobie", "The Doobie Brothers")
+        assert not TopTracksResolver._artist_match("The Doobie Brothers", "Doobie")
+
+    def test_collab_match(self):
+        assert TopTracksResolver._artist_match("Doobie", "Doobie & Krash Minati")
+        assert TopTracksResolver._artist_match("Doobie", "Doobie feat. Krash Minati")
+        assert TopTracksResolver._artist_match("Doobie", "Krash Minati with Doobie")
+        assert TopTracksResolver._artist_match("Doobie", "Doobie, Krash Minati")
+        assert TopTracksResolver._artist_match("Doobie", "Krash Minati x Doobie")
+
+    def test_normalization_variations(self):
+        assert TopTracksResolver._artist_match("Florence and the Machine", "Florence & The Machine")
+        assert TopTracksResolver._artist_match("Florence", "Florence & The Machine")
+        assert TopTracksResolver._artist_match("Jay-Z", "Jay Z")
+        assert TopTracksResolver._artist_match("Beyoncé", "Beyonce")
 
 
 class TestMergeTracks:

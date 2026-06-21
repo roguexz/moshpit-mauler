@@ -1,5 +1,7 @@
 import json
+import re
 import time
+import unicodedata
 from dataclasses import dataclass, asdict
 from typing import List, Optional
 
@@ -232,11 +234,6 @@ class TopTracksResolver:
                 if self._artist_match(artist, candidate):
                     return item.get("artistId")
 
-            # If no fuzzy match, take the first result
-            results = data.get("results", [])
-            if results:
-                return results[0].get("artistId")
-
             return None
 
         except Exception:
@@ -281,11 +278,63 @@ class TopTracksResolver:
             return []
 
     @staticmethod
+    def _normalize_artist_name(name: str) -> str:
+        """
+        Cleans and normalizes an artist name:
+        1. Lowercases and trims.
+        2. Removes parenthesized/bracketed metadata (e.g. (Band)).
+        3. Removes accents/diacritics.
+        4. Standardizes '&' to 'and'.
+        5. Removes non-alphanumeric characters except spaces.
+        6. Strips leading 'the '.
+        """
+        if not name:
+            return ""
+        n = name.lower().strip()
+        n = re.sub(r"\s*\([^)]*\)", "", n)
+        n = re.sub(r"\s*\[[^\]]*\]", "", n)
+        n = "".join(
+            c for c in unicodedata.normalize("NFKD", n)
+            if not unicodedata.combining(c)
+        )
+        n = n.replace("&", "and")
+        n = re.sub(r"[^a-z0-9\s]", "", n)
+        n = re.sub(r"\s+", " ", n).strip()
+        if n.startswith("the "):
+            n = n[4:].strip()
+        return n
+
+    @staticmethod
     def _artist_match(query: str, candidate: str) -> bool:
-        """Fuzzy artist name match — checks if one name contains the other."""
-        q = query.lower().strip()
-        c = candidate.lower().strip()
-        return q in c or c in q
+        """
+        Fuzzy artist name match:
+        1. Compares normalized exact match (with or without spaces).
+        2. If not matched, splits candidate by collaboration separators
+           and checks if the query matches any of the split parts.
+        """
+        q_norm = TopTracksResolver._normalize_artist_name(query)
+        c_norm = TopTracksResolver._normalize_artist_name(candidate)
+        if not q_norm or not c_norm:
+            return False
+
+        # Check for exact normalized match
+        if q_norm == c_norm or q_norm.replace(" ", "") == c_norm.replace(" ", ""):
+            return True
+
+        # Check for collaboration matches by splitting candidate
+        # e.g., "Doobie & Krash Minati" -> ["Doobie", "Krash Minati"]
+        separators = re.compile(
+            r"\s*(?:,|&|\b(?:and|feat\.?|featuring|with|vs\.?|x)\b)\s*",
+            re.IGNORECASE
+        )
+        parts = separators.split(candidate)
+        if len(parts) > 1:
+            for part in parts:
+                p_norm = TopTracksResolver._normalize_artist_name(part)
+                if q_norm == p_norm or q_norm.replace(" ", "") == p_norm.replace(" ", ""):
+                    return True
+
+        return False
 
     @staticmethod
     def _merge_tracks(

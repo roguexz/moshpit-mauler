@@ -585,3 +585,23 @@ def test_cli_prune_artist(mock_ipc_engine):
         assert result.exit_code == 0
         assert "Successfully removed 1 tracks" in result.stdout
         mock_ipc_engine.delete_tracks_by_id.assert_called_once_with([1001])
+
+
+def test_cli_prune_artist_tight_matching(mock_ipc_engine):
+    mock_ipc_engine.get_playlist_tracks.return_value = [
+        {
+            "id": 1001,
+            "databaseID": 1,
+            "name": "Time",
+            "artist": "Pink Floyd",
+            "album": "Dark Side",
+        },
+    ]
+    mock_ipc_engine.delete_tracks_by_id.return_value = 0
+    with mock.patch("sys.platform", "darwin"):
+        result = runner.invoke(
+            app, ["prune", "-p", "Test Playlist", "--artist", "Pink"]
+        )
+        assert result.exit_code == 0
+        assert "No tracks by artist 'Pink' found" in result.stdout
+        mock_ipc_engine.delete_tracks_by_id.assert_not_called()
