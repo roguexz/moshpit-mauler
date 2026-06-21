@@ -310,7 +310,7 @@ class TopTracksResolver:
         Deduplicates track suggestions by normalized title, picking the version
         with the highest preference score, and preserving original relative order.
         """
-        groups = {}  # norm_title -> List[(index, track)]
+        groups: dict[str, List[tuple[int, TrackSuggestion]]] = {}  # norm_title -> List[(index, track)]
         for idx, track in enumerate(tracks):
             norm_title = normalize_track_title(track.title)
             if norm_title not in groups:

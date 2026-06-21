@@ -95,9 +95,19 @@ Both runners expose standard OpenAI compatibility.
 
 ## Usage
 
-Run the program using `uv run moshpit run`.
+Moshpit Orchestrator provides a CLI tool via `uv run moshpit` with the following commands:
 
-### 1. Web Scraper Ingestion
+- [`run`](#1-run-command): Ingest source assets and generate an Apple Music playlist.
+- [`analyze`](#2-analyze-command): Inspect playlist statistics, unique artists, and track duplicate versions.
+- [`prune`](#3-prune-command): Remove duplicates or tracks from a specific artist.
+
+---
+
+### 1. Run Command
+
+Extract artists from the input and generate an Apple Music playlist containing their top tracks.
+
+#### Web Scraper Ingestion
 
 Fetches an event schedule URL, strips nav/footers/styling, clean-formats body text, and extracts artists:
 
@@ -105,7 +115,7 @@ Fetches an event schedule URL, strips nav/footers/styling, clean-formats body te
 uv run moshpit run "https://aftershockfestival.com/lineup" --playlist "Aftershock 2026"
 ```
 
-### 2. Vision Lineup Ingestion
+#### Vision Lineup Ingestion
 
 Reads a local poster/flyer image and runs VLM extraction:
 
@@ -113,7 +123,7 @@ Reads a local poster/flyer image and runs VLM extraction:
 uv run moshpit run "lineup_flyer.jpg" --playlist "Festival Poster Lineup"
 ```
 
-### 3. Plain Text Ingestion
+#### Plain Text Ingestion
 
 Reads a local plain text file containing a list of artists (one per line):
 
@@ -121,7 +131,7 @@ Reads a local plain text file containing a list of artists (one per line):
 uv run moshpit run "artists.txt" --playlist "Favorite Artists"
 ```
 
-### CLI Command Options
+#### Run Options
 
 ```bash
 uv run moshpit run [OPTIONS] INPUT_PATH
@@ -132,12 +142,64 @@ uv run moshpit run [OPTIONS] INPUT_PATH
   filename or URL domain.
 - `-s, --storefront TEXT`: The Apple Music storefront region to use (e.g. `us`, `in`, `gb`) for catalog searches (
   default: `us`).
-- `-t, --tracks-per-artist INTEGER`: Overrides the number of top tracks to append per artist (default: `3`).
-- `--dry-run`: Extracts artists and performs track resolution checks, but does **not** modify or create any
-  playlists.
+- `-t, --tracks-per-artist INTEGER`: Overrides the number of top tracks to append per artist (default: `20`).
+- `--dry-run`: Extracts artists and performs track resolution checks, but does **not** modify or create any playlists.
 - `--print-artists`: Extracts and prints the list of artists to standard output, then exits immediately. This option
   skips JXA/macOS validation checks, allowing you to test extraction on non-macOS platforms.
+- `-f, --force-refresh`: Force refresh and bypass cache for playlist sync and artist search.
 - `-v, --verbose`: Enables detailed `DEBUG` console log tracing.
+
+---
+
+### 2. Analyze Command
+
+Analyze an Apple Music playlist, showing stats, unique artists, or duplicate track versions.
+
+```bash
+uv run moshpit analyze [OPTIONS]
+```
+
+- `-p, --playlist TEXT` (Required): Name of the target Apple Music playlist.
+- `--list-artists`: List all unique artist names in the playlist.
+- `--list-duplicates`: List all duplicate track versions in the playlist.
+- `-v, --verbose`: Enable debug logging output.
+
+#### Examples
+
+- Show summary:
+  ```bash
+  uv run moshpit analyze -p "Aftershock 2026"
+  ```
+- List duplicate tracks:
+  ```bash
+  uv run moshpit analyze -p "Aftershock 2026" --list-duplicates
+  ```
+
+---
+
+### 3. Prune Command
+
+Prune duplicate track versions, or remove all tracks by a specific artist from a playlist.
+
+```bash
+uv run moshpit prune [OPTIONS]
+```
+
+- `-p, --playlist TEXT` (Required): Name of the target Apple Music playlist.
+- `--artist TEXT`: Remove all songs by this artist instead of pruning duplicates.
+- `--dry-run`: Simulate execution without modifying the playlist.
+- `-v, --verbose`: Enable debug logging output.
+
+#### Examples
+
+- Remove duplicate track versions:
+  ```bash
+  uv run moshpit prune -p "Aftershock 2026"
+  ```
+- Remove all tracks by a specific artist:
+  ```bash
+  uv run moshpit prune -p "Aftershock 2026" --artist "Metallica"
+  ```
 
 ## Developer CLI
 
