@@ -54,7 +54,15 @@ class AppleMusicWebEngine:
 
         # Try to load existing session headlessly
         logger.debug(f"Loading Playwright persistent context from {user_data_dir}")
-        context = p.chromium.launch_persistent_context(user_data_dir, headless=True)
+        context = p.chromium.launch_persistent_context(
+            user_data_dir,
+            headless=True,
+            args=[
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+            ],
+        )
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(f"https://music.apple.com/{self.storefront}/home")
 
@@ -95,7 +103,15 @@ class AppleMusicWebEngine:
         )
         print("=" * 60 + "\n")
 
-        context = p.chromium.launch_persistent_context(user_data_dir, headless=False)
+        context = p.chromium.launch_persistent_context(
+            user_data_dir,
+            headless=False,
+            args=[
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+            ],
+        )
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(f"https://music.apple.com/{self.storefront}/home")
 
