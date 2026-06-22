@@ -139,10 +139,11 @@ class AppleMusicWebEngine:
         """
         import subprocess
 
+        escaped_playlist = self._escape_quote(self.target_playlist)
         jxa = f"""
         (() => {{
             var Music = Application("Music");
-            var targetName = "{self.target_playlist}";
+            var targetName = "{escaped_playlist}";
             var playlists = Music.userPlaylists;
             var playlist = null;
             for (var i = 0; i < playlists.length; i++) {{
@@ -152,7 +153,6 @@ class AppleMusicWebEngine:
                 }}
             }}
             if (!playlist) {{
-                playlist = Music.UserPlaylist({{name: targetName}}).make();
                 return JSON.stringify([]);
             }}
             var tracksSpec = playlist.tracks;
@@ -268,7 +268,7 @@ class AppleMusicWebEngine:
             "failed_tracks": failed_tracks,
         }
 
-    def _add_track(self, page: Page, search_term: str) -> Dict[str, Any]:
+    def _add_track(self, page: Page, search_term: str, retries: int = 1) -> Dict[str, Any]:
         from urllib.parse import quote
 
         url = f"https://music.apple.com/{self.storefront}/search?term={quote(search_term)}"
@@ -287,15 +287,15 @@ class AppleMusicWebEngine:
             more_button.click()
 
             # Now wait for the context menu item "Add to Playlist"
-            add_to_playlist = page.locator("text='Add to Playlist'").first
+            add_to_playlist = page.locator(".contextual-menu").locator("text='Add to Playlist'").first
             add_to_playlist.wait_for(state="visible", timeout=5000)
 
             # Hover over "Add to Playlist" to open the sub-menu of playlists
             add_to_playlist.hover()
             page.wait_for_timeout(1000)  # give time for submenu to pop
 
-            # Find the specific playlist by its title attribute (which is robust for context menus)
-            playlist_item = page.locator(
+            # Find the specific playlist by its title attribute, scoped to the contextual menu
+            playlist_item = page.locator(".contextual-menu").locator(
                 f"button[title='{self.target_playlist}']"
             ).first
 
@@ -303,13 +303,19 @@ class AppleMusicWebEngine:
                 playlist_item.wait_for(state="visible", timeout=5000)
                 playlist_item.click()
             except TimeoutError:
+                if retries <= 0:
+                    return {
+                        "status": "not_found",
+                        "message": f"Playlist '{self.target_playlist}' not found in sub-menu after creation attempt.",
+                    }
+
                 logger.info(
                     f"Playlist '{self.target_playlist}' not found in web player menu. "
                     "Creating it on the fly..."
                 )
                 try:
-                    # Click the "New Playlist" button
-                    new_playlist_btn = page.locator("text='New Playlist'").first
+                    # Click the "New Playlist" button scoped to the contextual menu
+                    new_playlist_btn = page.locator(".contextual-menu").locator("text='New Playlist'").first
                     new_playlist_btn.wait_for(state="visible", timeout=5000)
                     new_playlist_btn.click()
 
@@ -327,6 +333,14 @@ class AppleMusicWebEngine:
 
                     # Wait for the input to disappear to confirm creation/addition is done
                     title_input.wait_for(state="hidden", timeout=10000)
+
+                    # Reload the page to refresh the playlist list in the web player's memory
+                    logger.info("Playlist created on the fly. Reloading page to refresh playlist database in web player...")
+                    page.reload()
+                    page.wait_for_timeout(2000)
+
+                    # Retry adding the track
+                    return self._add_track(page, search_term, retries=retries - 1)
                 except Exception as create_err:
                     return {
                         "status": "not_found",
