@@ -226,7 +226,7 @@ class AppleMusicWebEngine:
             logger.debug(f"Searching web for: {search_term}")
 
             try:
-                res = self._add_track(page, search_term)
+                res = self._add_track(page, search_term, artist, retries=1)
                 status = res.get("status", "error")
 
                 if status == "added":
@@ -268,21 +268,54 @@ class AppleMusicWebEngine:
             "failed_tracks": failed_tracks,
         }
 
-    def _add_track(self, page: Page, search_term: str, retries: int = 1) -> Dict[str, Any]:
+    def _add_track(
+        self, page: Page, search_term: str, target_artist: str, retries: int = 1
+    ) -> Dict[str, Any]:
         from urllib.parse import quote
 
         url = f"https://music.apple.com/{self.storefront}/search?term={quote(search_term)}"
         page.goto(url)
 
         try:
-            # First find the track row, wait for it to be visible, and hover over it to make the more-button visible
-            track_row = page.locator("[data-testid='track-lockup']").first
-            track_row.wait_for(state="visible", timeout=10000)
-            track_row.hover()
+            # First find the first track row and wait for it to be visible to ensure search loads
+            first_row = page.locator("[data-testid='track-lockup']").first
+            first_row.wait_for(state="visible", timeout=10000)
+
+            # Retrieve all track rows in the search results
+            track_rows = page.locator("[data-testid='track-lockup']").all()
+            matching_row = None
+
+            from moshpit.resolver import TopTracksResolver
+
+            for row in track_rows:
+                try:
+                    # Get artist subtitle from the row
+                    artist_subtitle_el = row.locator("[data-testid='track-lockup-subtitle']").first
+                    artist_subtitle = artist_subtitle_el.inner_text().strip()
+                except Exception:
+                    artist_subtitle = ""
+
+                # Verify if it matches target_artist
+                if TopTracksResolver._artist_match(target_artist, artist_subtitle):
+                    matching_row = row
+                    break
+
+            if not matching_row:
+                logger.warning(
+                    f"Skipping track search match: artist name mismatch. "
+                    f"Expected artist similar to '{target_artist}', but none of the search results matched."
+                )
+                return {
+                    "status": "not_found",
+                    "message": f"Artist name mismatch. Search results did not contain artist matching '{target_artist}'.",
+                }
+
+            # Hover over the matching row to make the more-button visible
+            matching_row.hover()
             page.wait_for_timeout(500)
 
-            # Now find the more-button inside the hovered track row
-            more_button = track_row.locator("[data-testid='more-button']").first
+            # Now find the more-button inside the hovered matching track row
+            more_button = matching_row.locator("[data-testid='more-button']").first
             more_button.wait_for(state="visible", timeout=5000)
             more_button.click()
 
@@ -340,7 +373,7 @@ class AppleMusicWebEngine:
                     page.wait_for_timeout(2000)
 
                     # Retry adding the track
-                    return self._add_track(page, search_term, retries=retries - 1)
+                    return self._add_track(page, search_term, target_artist, retries=retries - 1)
                 except Exception as create_err:
                     return {
                         "status": "not_found",
